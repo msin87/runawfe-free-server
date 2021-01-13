@@ -120,12 +120,12 @@ class VariableContainer {
 
     /*
         public VariableContainer(XMLNode xmlNode) {
-           switch-case: set this.variableType and field set one of the
+           switch-case: set this.variableType and set one of the
             fields according to the XML parse result
         }
 
         public VariableContainer(SomeObject someObject){
-            switch-case: set this.variableType and field set one of the
+            switch-case: set this.variableType and set one of the
             fields according to the someObject parse result
         }
      */
