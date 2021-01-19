@@ -23,10 +23,12 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.runa.wfe.ConfigurationException;
 import ru.runa.wfe.InternalApplicationException;
@@ -107,7 +109,7 @@ import ru.runa.wfe.var.VariableProvider;
  * @since 2.0
  */
 public class ExecutionLogic extends WfCommonLogic {
-    private static final SecuredObjectType[] PROCESS_EXECUTION_CLASSES = { SecuredObjectType.PROCESS };
+    private static final SecuredObjectType[] PROCESS_EXECUTION_CLASSES = {SecuredObjectType.PROCESS};
     @Autowired
     private ProcessFactory processFactory;
     @Autowired
@@ -249,9 +251,11 @@ public class ExecutionLogic extends WfCommonLogic {
         log.info(process + " was successfully started by " + user);
         return process.getId();
     }
+
     private AbstractFigureFactory getAbstractFigureFactory(Language workflowLanguage) {
         return workflowLanguage == Language.BPMN2 ? new BpmnFigureFactory() : new UmlFigureFactory();
     }
+
     public byte[] getProcessDiagram(User user, Long processId, Long taskId, Long childProcessId, String subprocessId) {
         try {
             Process process = processDao.getNotNull(processId);
@@ -273,9 +277,13 @@ public class ExecutionLogic extends WfCommonLogic {
             }
             ProcessLogs processLogs = new ProcessLogs(processId);
             processLogs.addLogs(processLogDao.get(processId, processDefinition), false);
-            GraphImageBuilder builder = new GraphImageBuilder(processDefinition);
-            builder.setHighlightedToken(highlightedToken);
-            return builder.createDiagram(process, processLogs, getAbstractFigureFactory(processDefinition.getDeployment().getLanguage()));
+            return new GraphImageBuilder(
+                    process,
+                    processDefinition,
+                    processLogs,
+                    getAbstractFigureFactory(processDefinition.getDeployment().getLanguage()))
+                    .setHighlightedToken(highlightedToken)
+                    .build();
         } catch (Exception e) {
             throw Throwables.propagate(e);
         }
@@ -559,7 +567,7 @@ public class ExecutionLogic extends WfCommonLogic {
                 processLogs.addLogs(processLogDao.getAll(processLogFilter), false);
                 CreateTimerLog createTimerLog = processLogs.getLastOrNull(CreateTimerLog.class);
                 if (createTimerLog == null) {
-                    throw new InternalApplicationException("Unable to find CreateTimerLog for " + process.getId() + "|" + token.getId()+"|"+node.getNodeId());
+                    throw new InternalApplicationException("Unable to find CreateTimerLog for " + process.getId() + "|" + token.getId() + "|" + node.getNodeId());
                 }
                 Date dueDate = createTimerLog.getDueDate();
                 ((TimerNode) node).restore(new ExecutionContext(processDefinition, token), dueDate);

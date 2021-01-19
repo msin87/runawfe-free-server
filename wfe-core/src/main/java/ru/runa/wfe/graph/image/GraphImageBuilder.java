@@ -33,6 +33,7 @@ import ru.runa.wfe.lang.*;
 import ru.runa.wfe.task.TaskDeadlineUtils;
 
 import java.awt.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -53,6 +54,11 @@ gavrusev_sergei, надеюсь ты больше так не пишешь ко�
 зависимости везде, где только можно, название переменных не отражает их сути.
 Необходима документация на класс, на методы, на поля.
  */
+
+/**
+ * GraphImageBuilder строит изображение для процесса и набора его параметров.
+ * Доступно кэширование результата построения изображения.
+ */
 public class GraphImageBuilder {
     private final ProcessDefinition processDefinition;
     private Token highlightedToken;
@@ -60,14 +66,22 @@ public class GraphImageBuilder {
     private final Map<TransitionFigure, RenderHits> transitionFigures = Maps.newHashMap();
     private final Map<AbstractFigure, RenderHits> nodeFigures = Maps.newLinkedHashMap();
     private final boolean smoothTransitions;
+    private byte[] imageBytes;
 
-    public GraphImageBuilder(ProcessDefinition processDefinition) {
+    public GraphImageBuilder(Process process, ProcessDefinition processDefinition, ProcessLogs processLogs, AbstractFigureFactory factory) {
         this.processDefinition = processDefinition;
         this.smoothTransitions = DrawProperties.isSmoothLinesEnabled() && processDefinition.getDeployment().getLanguage() == Language.BPMN2;
+        initFiguresMap(processDefinition.getNodes(false), factory, processLogs.getLastOrNull(NodeEnterLog.class));
+        initAllNodesTransitions(factory);
+        applyRenderHitsToNodeFigures(processLogs);
+        fillActiveSubprocesses(process.getRootToken());
+        fillTasks(processLogs);
+
     }
 
-    public void setHighlightedToken(Token highlightedToken) {
+    public GraphImageBuilder setHighlightedToken(Token highlightedToken) {
         this.highlightedToken = highlightedToken;
+        return this;
     }
 
     private void initFiguresMap(List<Node> nodeList, AbstractFigureFactory factory, NodeEnterLog lastNodeEnterLog) {
@@ -83,7 +97,7 @@ public class GraphImageBuilder {
         if (lastEnterLog != null) {
             NodeLeaveLog lastLeaveLog = logs.getLastOrNull(NodeLeaveLog.class);
             //noinspection SwitchStatementWithTooFewBranches
-            switch (lastLeaveLog.getNodeType()){
+            switch (lastLeaveLog.getNodeType()) {
                 case PARALLEL_GATEWAY:
                     AbstractFigure figure = figuresMap.get(lastLeaveLog.getNodeId());
                     if (figure != null) {
@@ -93,7 +107,7 @@ public class GraphImageBuilder {
                         }
                     }
                     break;
-                    //add here other node types
+                //add here other node types
                 default:
                     break;
             }
@@ -173,14 +187,9 @@ public class GraphImageBuilder {
         }
     }
 
-    public byte[] createDiagram(Process process, ProcessLogs logs, AbstractFigureFactory factory) throws Exception {
-        initFiguresMap(processDefinition.getNodes(false), factory, logs.getLastOrNull(NodeEnterLog.class));
-        initAllNodesTransitions(factory);
-        applyRenderHitsToNodeFigures(logs);
-        fillActiveSubprocesses(process.getRootToken());
-        fillTasks(logs);
-        GraphImage graphImage = new GraphImage(processDefinition, transitionFigures, nodeFigures);
-        return graphImage.getImageBytes();
+    //результат кешируется.
+    public byte[] build() throws IOException {
+        return this.imageBytes == null ? new GraphImage(processDefinition, transitionFigures, nodeFigures).getImageBytes() : this.imageBytes;
     }
 
     private void fillActiveSubprocesses(Token token) {

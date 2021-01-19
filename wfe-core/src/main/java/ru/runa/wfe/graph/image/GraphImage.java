@@ -58,7 +58,6 @@ public class GraphImage {
         this.transitions = transitions;
         this.nodes = nodes;
     }
-
     public byte[] getImageBytes() throws IOException {
         int width = processDefinition.getGraphConstraints()[2];
         int height = processDefinition.getGraphConstraints()[3];
